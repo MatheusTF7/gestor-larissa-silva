@@ -10,6 +10,7 @@ import type {
   Student,
   Transaction,
 } from '@/models';
+import { cloneData } from '@/utils/clone';
 
 const STORAGE_KEY = 'larissa-silva-app-data-v1';
 const LEGACY_STORAGE_KEY = 'movva-app-data-v1';
@@ -179,7 +180,7 @@ function demoData(): AppData {
         createdAt: `${month}-07`,
       },
     ],
-    settings: { ...structuredClone(defaultSettings), dataProfile: 'demo' },
+    settings: { ...cloneData(defaultSettings), dataProfile: 'demo' },
   };
 }
 
@@ -189,7 +190,7 @@ function productionData(): AppData {
     lessons: [],
     periods: [],
     transactions: [],
-    settings: structuredClone(defaultSettings),
+    settings: cloneData(defaultSettings),
   };
 }
 
@@ -258,6 +259,34 @@ export const useAppStore = defineStore('app', () => {
     if (student) student.active = !student.active;
   }
 
+  function saveRecurringSchedule(payload: {
+    studentId: string;
+    weekdays: number[];
+    startDate: string;
+    endDate: string;
+    time: string;
+    duration: number;
+    notes: string;
+  }) {
+    const student = students.value.find((item) => item.id === payload.studentId);
+    if (!student) return false;
+    const recurrenceId = uid();
+    payload.weekdays.forEach((weekday) => {
+      student.schedules.push({
+        id: uid(),
+        recurrenceId,
+        weekday,
+        time: payload.time,
+        duration: payload.duration,
+        kind: 'fixed',
+        notes: payload.notes,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+      });
+    });
+    return true;
+  }
+
   function saveLesson(payload: Omit<Lesson, 'id' | 'createdAt'> & { id?: string }) {
     if (payload.id) {
       const index = lessons.value.findIndex((lesson) => lesson.id === payload.id);
@@ -297,7 +326,12 @@ export const useAppStore = defineStore('app', () => {
       .filter((student) => student.active)
       .forEach((student) => {
         student.schedules
-          .filter((schedule) => schedule.weekday === weekday)
+          .filter(
+            (schedule) =>
+              schedule.weekday === weekday &&
+              (!schedule.startDate || dateString >= schedule.startDate) &&
+              (!schedule.endDate || dateString <= schedule.endDate),
+          )
           .forEach((schedule) => {
             const movedAway = lessons.value.some(
               (lesson) =>
@@ -444,6 +478,7 @@ export const useAppStore = defineStore('app', () => {
     activeStudents,
     saveStudent,
     toggleStudent,
+    saveRecurringSchedule,
     saveLesson,
     setLessonStatus,
     agendaForDate,

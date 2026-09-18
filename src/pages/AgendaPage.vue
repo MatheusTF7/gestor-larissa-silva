@@ -285,6 +285,149 @@
       </section>
     </main>
 
+    <q-dialog v-model="lessonTypeOpen" :position="$q.screen.lt.sm ? 'bottom' : 'standard'">
+      <q-card class="form-dialog lesson-type-dialog">
+        <header class="dialog-head">
+          <div>
+            <div class="eyebrow">Nova aula</div>
+            <h2 class="dialog-title">Como deseja agendar?</h2>
+          </div>
+          <q-space /><q-btn flat round icon="close" v-close-popup />
+        </header>
+        <q-card-section class="dialog-body lesson-type-options">
+          <button type="button" @click="chooseLessonType('simple')">
+            <span class="lesson-type-icon"><q-icon name="event" /></span>
+            <div>
+              <strong>Simples</strong>
+              <span>Uma aula avulsa somente na data selecionada.</span>
+            </div>
+            <q-icon name="chevron_right" />
+          </button>
+          <button type="button" @click="chooseLessonType('scheduled')">
+            <span class="lesson-type-icon scheduled"><q-icon name="event_repeat" /></span>
+            <div>
+              <strong>Agendada</strong>
+              <span>Uma rotina recorrente em dias e período personalizados.</span>
+            </div>
+            <q-icon name="chevron_right" />
+          </button>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog
+      v-model="recurringOpen"
+      :position="$q.screen.lt.sm ? 'bottom' : 'standard'"
+      persistent
+    >
+      <q-card class="form-dialog form-dialog--wide">
+        <header class="dialog-head">
+          <div>
+            <div class="eyebrow">Aula agendada</div>
+            <h2 class="dialog-title">Criar rotina de aulas</h2>
+          </div>
+          <q-space /><q-btn flat round icon="close" v-close-popup />
+        </header>
+        <q-form @submit="saveRecurringSchedule">
+          <q-card-section class="dialog-body recurring-form">
+            <q-select
+              v-model="recurringForm.studentId"
+              outlined
+              emit-value
+              map-options
+              use-input
+              input-debounce="0"
+              label="Aluno *"
+              :options="studentOptions"
+              :rules="[(v) => !!v || 'Selecione o aluno']"
+            />
+
+            <div class="recurring-section">
+              <div class="field-label">
+                <strong>Dias da semana *</strong>
+                <span>Selecione todos os dias em que a aula deve se repetir.</span>
+              </div>
+              <div class="recurring-days">
+                <button
+                  v-for="day in weekdays"
+                  :key="day.value"
+                  type="button"
+                  :class="{ active: recurringForm.weekdays.includes(day.value) }"
+                  @click="toggleRecurringDay(day.value)"
+                >
+                  <span>{{ day.short }}</span>
+                  <small>{{ day.label }}</small>
+                </button>
+              </div>
+            </div>
+
+            <div class="two-fields">
+              <q-input
+                v-model="recurringForm.startDate"
+                outlined
+                type="date"
+                stack-label
+                label="Início *"
+                :rules="[(v) => !!v || 'Informe a data inicial']"
+              />
+              <q-input
+                v-model="recurringForm.endDate"
+                outlined
+                type="date"
+                stack-label
+                label="Término *"
+                :min="recurringForm.startDate"
+                :rules="[
+                  (v) => !!v || 'Informe a data final',
+                  (v) =>
+                    v >= recurringForm.startDate || 'A data final deve ser posterior ao início',
+                ]"
+              />
+            </div>
+
+            <div class="recurrence-presets">
+              <span>Duração rápida:</span>
+              <q-btn flat dense no-caps label="1 mês" @click="setRecurrenceMonths(1)" />
+              <q-btn flat dense no-caps label="3 meses" @click="setRecurrenceMonths(3)" />
+              <q-btn flat dense no-caps label="6 meses" @click="setRecurrenceMonths(6)" />
+              <q-btn flat dense no-caps label="1 ano" @click="setRecurrenceMonths(12)" />
+            </div>
+
+            <div class="two-fields">
+              <q-input
+                v-model="recurringForm.time"
+                outlined
+                type="time"
+                stack-label
+                label="Horário *"
+                :rules="[(v) => !!v || 'Informe o horário']"
+              />
+              <q-input
+                v-model.number="recurringForm.duration"
+                outlined
+                type="number"
+                min="15"
+                step="5"
+                label="Duração (min)"
+              />
+            </div>
+            <q-input v-model="recurringForm.notes" outlined autogrow label="Observações" />
+          </q-card-section>
+          <q-card-actions class="dialog-actions" align="right">
+            <q-btn flat no-caps label="Cancelar" v-close-popup />
+            <q-btn
+              unelevated
+              no-caps
+              color="primary"
+              icon="event_repeat"
+              label="Criar rotina"
+              type="submit"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="groupOpen" :position="$q.screen.lt.sm ? 'bottom' : 'standard'">
       <q-card class="form-dialog"
         ><header class="dialog-head">
@@ -445,7 +588,7 @@ import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import type { AgendaItem, LessonStatus } from '@/models';
 import { toISODate, useAppStore } from '@/stores/app-store';
-import { formatDate, lessonStatuses, statusLabel } from '@/utils/format';
+import { formatDate, lessonStatuses, statusLabel, weekdays } from '@/utils/format';
 
 const $q = useQuasar();
 const store = useAppStore();
@@ -457,6 +600,8 @@ const view = ref<'day' | 'week'>('week');
 const showWeekends = ref(
   store.settings.workingDays.some((weekday) => weekday === 6 || weekday === 7),
 );
+const lessonTypeOpen = ref(false);
+const recurringOpen = ref(false);
 const formOpen = ref(false);
 const groupOpen = ref(false);
 const groupItems = ref<AgendaItem[]>([]);
@@ -481,6 +626,16 @@ const lessonForm = reactive<{
   status: 'scheduled',
   notes: '',
   originalDate: undefined,
+});
+const pendingLesson = reactive({ date: today, time: '08:00' });
+const recurringForm = reactive({
+  studentId: '',
+  weekdays: [] as number[],
+  startDate: today,
+  endDate: today,
+  time: '08:00',
+  duration: 60,
+  notes: '',
 });
 const studentOptions = computed(() =>
   store.activeStudents
@@ -580,8 +735,70 @@ function resetForm(date = today, time = '08:00') {
   editingItem.value = null;
 }
 function openNewLesson(date = selectedDate.value, time = '08:00') {
-  resetForm(date, time);
-  formOpen.value = true;
+  pendingLesson.date = date;
+  pendingLesson.time = time;
+  lessonTypeOpen.value = true;
+}
+function chooseLessonType(type: 'simple' | 'scheduled') {
+  lessonTypeOpen.value = false;
+  if (type === 'simple') {
+    resetForm(pendingLesson.date, pendingLesson.time);
+    formOpen.value = true;
+    return;
+  }
+  const date = new Date(`${pendingLesson.date}T12:00:00`);
+  const weekday = date.getDay() || 7;
+  Object.assign(recurringForm, {
+    studentId: '',
+    weekdays: [weekday],
+    startDate: pendingLesson.date,
+    time: pendingLesson.time,
+    duration: store.settings.defaultDuration,
+    notes: '',
+  });
+  setRecurrenceMonths(3);
+  recurringOpen.value = true;
+}
+function toggleRecurringDay(day: number) {
+  recurringForm.weekdays = recurringForm.weekdays.includes(day)
+    ? recurringForm.weekdays.filter((item) => item !== day)
+    : [...recurringForm.weekdays, day].sort((a, b) => a - b);
+}
+function setRecurrenceMonths(months: number) {
+  const endDate = new Date(`${recurringForm.startDate}T12:00:00`);
+  const day = endDate.getDate();
+  endDate.setDate(1);
+  endDate.setMonth(endDate.getMonth() + months);
+  const lastDayOfMonth = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate();
+  endDate.setDate(Math.min(day, lastDayOfMonth));
+  recurringForm.endDate = toISODate(endDate);
+}
+function saveRecurringSchedule() {
+  if (!recurringForm.weekdays.length) {
+    $q.notify({ type: 'warning', message: 'Selecione ao menos um dia da semana.' });
+    return;
+  }
+  if (recurringForm.endDate < recurringForm.startDate) {
+    $q.notify({ type: 'warning', message: 'A data final deve ser posterior ao início.' });
+    return;
+  }
+  const saved = store.saveRecurringSchedule({
+    studentId: recurringForm.studentId,
+    weekdays: recurringForm.weekdays,
+    startDate: recurringForm.startDate,
+    endDate: recurringForm.endDate,
+    time: recurringForm.time,
+    duration: recurringForm.duration,
+    notes: recurringForm.notes,
+  });
+  if (!saved) {
+    $q.notify({ type: 'negative', message: 'Não foi possível localizar o aluno selecionado.' });
+    return;
+  }
+  recurringOpen.value = false;
+  selectedDate.value = recurringForm.startDate;
+  $q.notify({ type: 'positive', message: 'Rotina de aulas criada com sucesso.' });
+  void router.replace({ query: {} });
 }
 function openEdit(item: AgendaItem) {
   editingItem.value = item;
@@ -1093,6 +1310,121 @@ onMounted(() => {
   align-items: center;
   gap: 8px 12px;
 }
+.lesson-type-options {
+  display: grid;
+  gap: 10px;
+}
+.lesson-type-options > button {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--studio-surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.lesson-type-options > button:hover {
+  border-color: var(--q-primary);
+  background: var(--studio-background);
+}
+.lesson-type-options > button > div {
+  display: flex;
+  flex-direction: column;
+}
+.lesson-type-options > button > div span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.lesson-type-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--studio-primary-soft);
+  color: var(--q-primary);
+  font-size: 22px;
+}
+.lesson-type-icon.scheduled {
+  background: #e9efe9;
+  color: var(--q-positive);
+}
+.recurring-form {
+  display: grid;
+  gap: 8px;
+}
+.recurring-section {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.field-label {
+  display: flex;
+  flex-direction: column;
+}
+.field-label span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.recurring-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.recurring-days button {
+  display: flex;
+  min-width: 0;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--studio-surface);
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.recurring-days button span {
+  font-size: 10px;
+  font-weight: 700;
+}
+.recurring-days button small {
+  display: none;
+}
+.recurring-days button.active {
+  border-color: var(--q-primary);
+  background: var(--studio-primary-soft);
+  color: var(--q-primary);
+}
+.recurrence-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin: -5px 0 8px;
+}
+.recurrence-presets > span {
+  margin-right: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.recurrence-presets .q-btn {
+  border: 1px solid var(--line);
+  color: var(--q-primary);
+  font-size: 11px;
+}
 .lesson-form {
   display: grid;
   gap: 5px;
@@ -1159,6 +1491,22 @@ onMounted(() => {
   }
   .two-fields {
     grid-template-columns: 1fr;
+  }
+  .lesson-type-options {
+    padding: 10px 18px 20px;
+  }
+  .recurring-days {
+    gap: 4px;
+  }
+  .recurring-days button {
+    min-height: 45px;
+    border-radius: 8px;
+  }
+  .recurrence-presets {
+    align-items: stretch;
+  }
+  .recurrence-presets > span {
+    width: 100%;
   }
   .week-grid {
     min-width: 800px;

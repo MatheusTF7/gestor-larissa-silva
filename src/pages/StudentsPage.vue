@@ -374,6 +374,7 @@ import { useQuasar, type QForm } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import type { Schedule, Student } from '@/models';
 import { uid, useAppStore } from '@/stores/app-store';
+import { cloneData } from '@/utils/clone';
 import { formatDate, phoneHref, statusLabel, weekdays } from '@/utils/format';
 
 const $q = useQuasar();
@@ -434,7 +435,7 @@ const initials = (name: string) =>
     .toUpperCase();
 const weekdayName = (day: number) => weekdays.find((item) => item.value === day)?.label ?? '';
 function openForm(student?: Student) {
-  Object.assign(form, student ? structuredClone(student) : blankForm());
+  Object.assign(form, student ? cloneData(student) : blankForm());
   formOpen.value = true;
 }
 function addSchedule() {
@@ -448,7 +449,7 @@ function addSchedule() {
   });
 }
 function saveStudent() {
-  const { id, ...payload } = structuredClone(form);
+  const { id, ...payload } = cloneData(form);
   store.saveStudent({ ...payload, ...(id ? { id } : {}) });
   formOpen.value = false;
   $q.notify({ type: 'positive', message: 'Aluno salvo com sucesso.' });

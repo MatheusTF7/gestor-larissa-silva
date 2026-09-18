@@ -347,6 +347,7 @@ import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import type { Transaction, TransactionType } from '@/models';
 import { currentPeriodKey, useAppStore } from '@/stores/app-store';
+import { cloneData } from '@/utils/clone';
 import { formatCurrency, formatDate, monthLabel } from '@/utils/format';
 
 const $q = useQuasar();
@@ -411,7 +412,7 @@ function moveMonth(offset: number) {
   periodKey.value = currentPeriodKey(new Date(year!, month! - 1 + offset, 1));
 }
 function openTransaction(item?: Transaction, type: TransactionType = 'income') {
-  Object.assign(transactionForm, item ? structuredClone(item) : blankTransaction(type));
+  Object.assign(transactionForm, blankTransaction(type), item ? cloneData(item) : {});
   formOpen.value = true;
 }
 function dateInPeriod(value: string) {

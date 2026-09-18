@@ -4,11 +4,14 @@ export type DataProfile = 'production' | 'demo';
 
 export interface Schedule {
   id: string;
+  recurrenceId?: string;
   weekday: number;
   time: string;
   duration: number;
   kind: 'fixed' | 'single';
   notes: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface Student {
