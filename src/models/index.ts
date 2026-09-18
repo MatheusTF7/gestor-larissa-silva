@@ -88,4 +88,3 @@ export interface AgendaItem {
   scheduleId?: string;
   isRecurring: boolean;
 }
-

@@ -1,8 +1,8 @@
 {
-  "name": "quasar-project",
+  "name": "gestor-larissa-silva",
   "version": "0.0.1",
-  "description": "Gestão de alunos, agenda e controle financeiro",
-  "productName": "Movva",
+  "description": "Sistema de gestão de aulas, alunos, agenda e financeiro de Larissa Silva",
+  "productName": "Larissa Silva",
   "type": "module",
   "private": true,
   "scripts": {

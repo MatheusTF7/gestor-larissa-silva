@@ -233,7 +233,7 @@ export default defineConfig((/* ctx */) => {
       builder: {
         // https://www.electron.build/configuration
 
-        appId: 'quasar-project',
+        appId: 'com.larissasilva.gestao',
       },
     },
 

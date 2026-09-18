@@ -1,4 +1,4 @@
-# Movva
+# Larissa Silva — Gestão de aulas
 
 Aplicação Quasar + TypeScript para gestão de alunos, agenda de aulas e controle financeiro mensal.
 

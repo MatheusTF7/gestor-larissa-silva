@@ -36,18 +36,27 @@
             @click="moveDate(view === 'week' ? 7 : 1)"
           />
         </div>
-        <q-btn-toggle
-          v-model="view"
-          no-caps
-          unelevated
-          toggle-color="primary"
-          color="white"
-          text-color="grey-8"
-          :options="[
-            { label: 'Dia', value: 'day' },
-            { label: 'Semana', value: 'week' },
-          ]"
-        />
+        <div class="agenda-view-options">
+          <q-toggle
+            v-if="view === 'week'"
+            v-model="showWeekends"
+            dense
+            color="primary"
+            label="Fim de semana"
+          />
+          <q-btn-toggle
+            v-model="view"
+            no-caps
+            unelevated
+            toggle-color="primary"
+            color="white"
+            text-color="grey-8"
+            :options="[
+              { label: 'Dia', value: 'day' },
+              { label: 'Semana', value: 'week' },
+            ]"
+          />
+        </div>
       </section>
 
       <section v-if="view === 'week'" class="week-board surface">
@@ -321,6 +330,7 @@ const router = useRouter();
 const today = toISODate(new Date());
 const selectedDate = ref(today);
 const view = ref<'day' | 'week'>('week');
+const showWeekends = ref(store.settings.workingDays.some((weekday) => weekday === 6 || weekday === 7));
 const formOpen = ref(false);
 const groupOpen = ref(false);
 const groupItems = ref<AgendaItem[]>([]);
@@ -354,14 +364,18 @@ const studentOptions = computed(() =>
 const dayItems = computed(() => store.agendaForDate(selectedDate.value));
 const weekStart = computed(() => {
   const date = new Date(`${selectedDate.value}T12:00:00`);
-  const day = date.getDay() || 7;
-  date.setDate(date.getDate() - day + 1);
+  date.setDate(date.getDate() - date.getDay());
   return date;
 });
+const visibleWeekdays = computed(() => {
+  const workingDays = store.settings.workingDays.filter((weekday) => weekday >= 1 && weekday <= 5);
+  const weekdays = workingDays.length ? workingDays : [1, 2, 3, 4, 5];
+  return showWeekends.value ? [7, ...weekdays, 6] : weekdays;
+});
 const weekDays = computed(() =>
-  store.settings.workingDays.map((weekday) => {
+  visibleWeekdays.value.map((weekday) => {
     const date = new Date(weekStart.value);
-    date.setDate(date.getDate() + weekday - 1);
+    date.setDate(date.getDate() + (weekday === 7 ? 0 : weekday));
     const iso = toISODate(date);
     return {
       date: iso,
@@ -497,6 +511,11 @@ onMounted(() => {
 .date-nav {
   display: flex;
   align-items: center;
+}
+.agenda-view-options {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 .date-label {
   min-width: 260px;
@@ -785,6 +804,9 @@ onMounted(() => {
   }
   .date-nav {
     justify-content: center;
+  }
+  .agenda-view-options {
+    justify-content: space-between;
   }
   .date-label {
     min-width: 190px;
