@@ -496,7 +496,7 @@ onMounted(() => {
   gap: 6px;
   padding: 7px 11px;
   border-radius: 10px;
-  background: #eceeeb;
+  background: var(--studio-background);
   color: var(--muted);
   font-size: 12px;
 }
@@ -540,20 +540,20 @@ onMounted(() => {
   font-size: 21px;
 }
 .summary-icon.neutral {
-  background: #edf0ed;
-  color: #64736e;
+  background: var(--studio-background);
+  color: var(--studio-text-muted);
 }
 .summary-card.expense .summary-icon {
   background: var(--orange-soft);
-  color: #b66b45;
+  color: var(--q-primary);
 }
 .summary-card.balance {
-  background: #2c6f61;
+  background: var(--q-dark);
   color: #fff;
 }
 .summary-card.balance span,
 .summary-card.balance small {
-  color: #d8e9e3;
+  color: var(--studio-primary-soft);
 }
 .summary-card.balance .summary-icon {
   background: rgba(255, 255, 255, 0.15);
@@ -578,7 +578,7 @@ onMounted(() => {
   grid-template-columns: minmax(220px, 1fr) 160px 190px;
   gap: 10px;
   padding: 14px 24px;
-  background: #faf9f5;
+  background: var(--studio-background);
 }
 .transaction-table {
   width: 100%;
@@ -641,20 +641,20 @@ onMounted(() => {
 }
 .tx-icon.expense {
   background: var(--orange-soft);
-  color: #b66b45;
+  color: var(--q-primary);
 }
 .category-tag {
   width: max-content;
   padding: 4px 8px;
   border-radius: 8px;
-  background: #f0f1ed;
+  background: var(--studio-background);
   color: var(--muted);
 }
 .income-value {
   color: var(--positive);
 }
 .expense-value {
-  color: #b45e43;
+  color: var(--q-negative);
 }
 .transaction-form {
   display: grid;
@@ -688,7 +688,7 @@ onMounted(() => {
   margin: 4px 0;
   padding: 12px;
   border-radius: 10px;
-  background: #f4f4ef;
+  background: var(--studio-background);
 }
 @media (max-width: 1100px) {
   .summary-grid {

@@ -556,7 +556,7 @@ onMounted(() => {
   background: var(--positive);
 }
 .state-dot.inactive {
-  background: #a7ada9;
+  background: var(--studio-text-muted);
 }
 .schedule-list {
   display: grid;
@@ -569,7 +569,7 @@ onMounted(() => {
   gap: 7px;
   padding: 8px 9px;
   border-radius: 9px;
-  background: #f6f6f1;
+  background: var(--studio-background);
   font-size: 12px;
 }
 .schedule-row .q-icon {
@@ -625,7 +625,7 @@ onMounted(() => {
 }
 .schedule-empty {
   padding: 18px;
-  border: 1px dashed #d8d8cf;
+  border: 1px dashed var(--studio-border);
   border-radius: 12px;
   color: var(--muted);
   text-align: center;
@@ -640,7 +640,7 @@ onMounted(() => {
   justify-content: space-between;
   padding: 12px 15px;
   border-radius: 12px;
-  background: #f4f5f1;
+  background: var(--studio-background);
 }
 .contact-strip > div {
   display: flex;
@@ -700,7 +700,7 @@ onMounted(() => {
 }
 .notes-box p {
   margin: 5px 0 0;
-  color: #795747;
+  color: var(--studio-text);
 }
 @media (max-width: 1100px) {
   .student-grid {

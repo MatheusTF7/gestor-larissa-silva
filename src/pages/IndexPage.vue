@@ -181,7 +181,7 @@ const quickActions = [
   justify-content: space-between;
   overflow: hidden;
   padding: 28px 32px;
-  background: linear-gradient(120deg, #fffdf9 60%, #e6f0ec);
+  background: linear-gradient(120deg, var(--studio-surface) 60%, var(--studio-primary-soft));
 }
 .hero-title {
   margin: 0;
@@ -198,7 +198,7 @@ const quickActions = [
   width: 84px;
   height: 84px;
   place-content: center;
-  border: 1px solid #cfdfd9;
+  border: 1px solid var(--studio-border);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.65);
   text-align: center;
@@ -260,15 +260,15 @@ const quickActions = [
   color: var(--q-primary);
 }
 .quick-icon.blue {
-  background: #e7eff4;
-  color: #47788c;
+  background: #e8eef0;
+  color: var(--q-info);
 }
 .quick-icon.peach {
   background: var(--orange-soft);
-  color: #b26843;
+  color: var(--q-primary);
 }
 .quick-arrow {
-  color: #a7b1ad;
+  color: var(--studio-text-muted);
 }
 .dashboard-grid {
   display: grid;
@@ -295,7 +295,7 @@ const quickActions = [
   min-height: 67px;
   align-items: center;
   gap: 14px;
-  border-bottom: 1px solid #efede7;
+  border-bottom: 1px solid var(--studio-border);
 }
 .lesson-row:last-child {
   border: 0;
@@ -308,7 +308,7 @@ const quickActions = [
   width: 3px;
   height: 34px;
   border-radius: 3px;
-  background: #84ab9f;
+  background: var(--q-accent);
 }
 .lesson-person {
   display: flex;
@@ -352,7 +352,7 @@ const quickActions = [
 }
 .finance-pair .expense {
   background: var(--orange-soft);
-  color: #a65f3c;
+  color: var(--q-negative);
 }
 .finance-pair span {
   font-size: 11px;
@@ -377,7 +377,7 @@ const quickActions = [
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: #f0f3ef;
+  background: var(--studio-primary-soft);
   color: var(--q-primary);
   font-size: 21px;
 }

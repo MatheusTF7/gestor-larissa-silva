@@ -306,15 +306,15 @@ function confirmReset() {
 }
 .setting-icon.orange {
   background: var(--orange-soft);
-  color: #b16945;
+  color: var(--q-primary);
 }
 .setting-icon.blue {
-  background: #e8eff3;
-  color: #4b7889;
+  background: #e8eef0;
+  color: var(--q-info);
 }
 .setting-icon.grey {
-  background: #eff0ed;
-  color: #6e7874;
+  background: var(--studio-background);
+  color: var(--studio-text-muted);
 }
 .settings-form {
   display: grid;
@@ -403,7 +403,7 @@ function confirmReset() {
   margin: 0 24px 22px;
   padding: 15px;
   border-radius: 12px;
-  background: #f4f5f1;
+  background: var(--studio-background);
 }
 .single-setting > div,
 .data-actions > div {

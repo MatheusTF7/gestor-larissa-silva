@@ -88,13 +88,14 @@ export default defineConfig((/* ctx */) => {
     framework: {
       config: {
         brand: {
-          primary: '#256f62',
-          secondary: '#da8756',
-          accent: '#9e735e',
-          positive: '#2f8463',
-          negative: '#c45d55',
-          warning: '#d99b4b',
-          dark: '#243632',
+          primary: '#b86f4e',
+          secondary: '#f3dea0',
+          accent: '#d39a70',
+          positive: '#718b72',
+          negative: '#b6534b',
+          info: '#738a92',
+          warning: '#d69b45',
+          dark: '#392a25',
         },
         notify: { position: 'top-right', timeout: 2200 },
       },

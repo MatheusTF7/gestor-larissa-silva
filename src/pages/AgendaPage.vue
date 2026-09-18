@@ -567,7 +567,7 @@ onMounted(() => {
   box-shadow: 0 5px 14px rgba(50, 60, 55, 0.04);
 }
 .time-card:hover {
-  border-color: #aac9be;
+  border-color: var(--q-accent);
 }
 .time-card-head {
   display: flex;
@@ -578,7 +578,7 @@ onMounted(() => {
 .time-card-head > span {
   padding: 2px 6px;
   border-radius: 8px;
-  background: #eef2ef;
+  background: var(--studio-background);
   color: var(--muted);
   font-size: 10px;
 }
@@ -594,7 +594,7 @@ onMounted(() => {
   height: 7px;
   flex: 0 0 7px;
   border-radius: 50%;
-  background: #7799aa;
+  background: var(--q-info);
 }
 .status-dot.completed,
 .timeline-marker.completed {
@@ -678,7 +678,7 @@ onMounted(() => {
   height: 10px;
   margin-top: 23px;
   border-radius: 50%;
-  background: #7799aa;
+  background: var(--q-info);
 }
 .timeline-marker:after {
   position: absolute;
@@ -686,7 +686,7 @@ onMounted(() => {
   left: 4px;
   width: 2px;
   height: 76px;
-  background: #e4e6e0;
+  background: var(--studio-border);
   content: '';
 }
 .timeline-item:last-child .timeline-marker:after {
@@ -769,7 +769,7 @@ onMounted(() => {
 }
 .conflict-alert.full {
   background: var(--red-soft);
-  color: #9b4d48;
+  color: var(--q-negative);
 }
 .conflict-alert div {
   display: flex;
