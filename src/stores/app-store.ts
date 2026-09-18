@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
+import { uid as quasarUid } from 'quasar';
 import type {
   AgendaItem,
   AppData,
@@ -14,8 +15,9 @@ import { cloneData } from '@/utils/clone';
 
 const STORAGE_KEY = 'larissa-silva-app-data-v1';
 const LEGACY_STORAGE_KEY = 'movva-app-data-v1';
+const BACKUP_VERSION = 1;
 
-export const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+export const uid = quasarUid;
 
 export const toISODate = (date: Date) => {
   const year = date.getFullYear();
@@ -192,6 +194,52 @@ function productionData(): AppData {
     transactions: [],
     settings: cloneData(defaultSettings),
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseBackup(payload: unknown): AppData {
+  if (!isRecord(payload)) throw new Error('O arquivo não contém um backup válido.');
+  const source = isRecord(payload.data) ? payload.data : payload;
+  const requiredArrays = ['students', 'lessons', 'periods', 'transactions'] as const;
+  requiredArrays.forEach((key) => {
+    if (!Array.isArray(source[key])) throw new Error(`O backup não contém a coleção “${key}”.`);
+  });
+  if (!isRecord(source.settings)) throw new Error('O backup não contém as configurações.');
+  const importedSettings = source.settings;
+  if (!isRecord(importedSettings.categories)) {
+    throw new Error('As categorias do backup são inválidas.');
+  }
+  if (
+    !Array.isArray(importedSettings.categories.income) ||
+    !Array.isArray(importedSettings.categories.expense)
+  ) {
+    throw new Error('As categorias financeiras do backup são inválidas.');
+  }
+
+  const dataProfile =
+    importedSettings.dataProfile === 'demo' || importedSettings.dataProfile === 'production'
+      ? importedSettings.dataProfile
+      : 'production';
+
+  return cloneData({
+    students: source.students,
+    lessons: source.lessons,
+    periods: source.periods,
+    transactions: source.transactions,
+    settings: {
+      ...defaultSettings,
+      ...importedSettings,
+      dataProfile,
+      profileLocked: Boolean(importedSettings.profileLocked),
+      categories: {
+        income: importedSettings.categories.income,
+        expense: importedSettings.categories.expense,
+      },
+    },
+  }) as AppData;
 }
 
 function loadData(): AppData {
@@ -469,6 +517,33 @@ export const useAppStore = defineStore('app', () => {
     return true;
   }
 
+  function createBackup() {
+    return {
+      application: 'Larissa Silva',
+      version: BACKUP_VERSION,
+      exportedAt: new Date().toISOString(),
+      data: cloneData({
+        students: students.value,
+        lessons: lessons.value,
+        periods: periods.value,
+        transactions: transactions.value,
+        settings: settings.value,
+      }),
+    };
+  }
+
+  function importBackup(payload: unknown) {
+    if (settings.value.profileLocked) {
+      throw new Error('Desative a trava do modo de produção antes de importar um backup.');
+    }
+    const imported = parseBackup(payload);
+    students.value = imported.students;
+    lessons.value = imported.lessons;
+    periods.value = imported.periods;
+    transactions.value = imported.transactions;
+    settings.value = imported.settings;
+  }
+
   return {
     students,
     lessons,
@@ -492,5 +567,7 @@ export const useAppStore = defineStore('app', () => {
     addCategory,
     removeCategory,
     switchDataProfile,
+    createBackup,
+    importBackup,
   };
 });

@@ -236,6 +236,54 @@
             </div>
           </div>
         </section>
+
+        <section class="surface settings-section backup-section">
+          <header>
+            <span class="setting-icon blue"><q-icon name="cloud_sync" /></span>
+            <div>
+              <h2 class="section-title">Backup e restauração</h2>
+              <p>Exporte todos os dados ou restaure um arquivo salvo anteriormente.</p>
+            </div>
+          </header>
+          <div class="backup-content">
+            <div class="backup-copy">
+              <q-icon name="verified_user" />
+              <div>
+                <strong>Backup completo em JSON</strong>
+                <span>Inclui alunos, aulas, recorrências, financeiro e configurações.</span>
+              </div>
+            </div>
+            <div class="backup-actions">
+              <q-btn
+                outline
+                no-caps
+                color="primary"
+                icon="download"
+                label="Exportar backup"
+                @click="exportBackup"
+              />
+              <q-btn
+                unelevated
+                no-caps
+                color="primary"
+                icon="upload_file"
+                label="Importar backup"
+                :disable="store.settings.profileLocked"
+                @click="selectBackupFile"
+              />
+              <input
+                ref="backupInput"
+                class="backup-file-input"
+                type="file"
+                accept="application/json,.json"
+                @change="handleBackupFile"
+              />
+            </div>
+            <div v-if="store.settings.profileLocked" class="backup-lock-warning">
+              <q-icon name="lock" /> Desative a trava do modo de produção para importar dados.
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </q-page>
@@ -253,6 +301,7 @@ const store = useAppStore();
 const categoryTab = ref<'income' | 'expense'>('income');
 const newIncome = ref('');
 const newExpense = ref('');
+const backupInput = ref<HTMLInputElement | null>(null);
 const durationOptions = [30, 40, 45, 50, 60, 75, 90].map((value) => ({
   label: `${value} minutos`,
   value,
@@ -312,6 +361,55 @@ function confirmProfileChange(profile: DataProfile | null) {
     if (!store.switchDataProfile(profile)) return;
     $q.notify({ type: 'positive', message: `Perfil alterado para “${targetLabel}”.` });
   });
+}
+function exportBackup() {
+  const content = JSON.stringify(store.createBackup(), null, 2);
+  const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `larissa-silva-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  $q.notify({ type: 'positive', message: 'Backup exportado com sucesso.' });
+}
+function selectBackupFile() {
+  if (store.settings.profileLocked) {
+    $q.notify({ type: 'warning', message: 'Desative a trava de produção antes de importar.' });
+    return;
+  }
+  backupInput.value?.click();
+}
+async function handleBackupFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+
+  try {
+    const payload = JSON.parse(await file.text()) as unknown;
+    $q.dialog({
+      title: 'Importar este backup?',
+      message:
+        'Todos os dados atuais serão substituídos pelo conteúdo do arquivo. Essa ação não pode ser desfeita.',
+      cancel: { label: 'Cancelar', flat: true },
+      ok: { label: 'Importar e substituir', color: 'negative', unelevated: true },
+      persistent: true,
+    }).onOk(() => {
+      try {
+        store.importBackup(payload);
+        $q.notify({ type: 'positive', message: 'Backup importado com sucesso.' });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Não foi possível importar o backup.';
+        $q.notify({ type: 'negative', message });
+      }
+    });
+  } catch {
+    $q.notify({ type: 'negative', message: 'O arquivo selecionado não contém um JSON válido.' });
+  }
 }
 </script>
 
@@ -507,6 +605,47 @@ function confirmProfileChange(profile: DataProfile | null) {
   color: var(--ink);
   font-size: 18px;
 }
+.backup-content {
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px;
+}
+.backup-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--studio-background);
+}
+.backup-copy > .q-icon {
+  color: var(--q-positive);
+  font-size: 25px;
+}
+.backup-copy > div {
+  display: flex;
+  flex-direction: column;
+}
+.backup-copy span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.backup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.backup-file-input {
+  display: none;
+}
+.backup-lock-warning {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--q-warning);
+  font-size: 11px;
+}
 @media (max-width: 1000px) {
   .settings-grid {
     grid-template-columns: 1fr;
@@ -534,6 +673,9 @@ function confirmProfileChange(profile: DataProfile | null) {
     justify-self: start;
   }
   .data-summary {
+    grid-template-columns: 1fr;
+  }
+  .backup-actions {
     grid-template-columns: 1fr;
   }
 }
