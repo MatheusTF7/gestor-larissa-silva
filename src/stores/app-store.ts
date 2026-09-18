@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import type {
   AgendaItem,
   AppData,
+  DataProfile,
   FinancialPeriod,
   Lesson,
   Settings,
@@ -10,7 +11,8 @@ import type {
   Transaction,
 } from '@/models';
 
-const STORAGE_KEY = 'movva-app-data-v1';
+const STORAGE_KEY = 'larissa-silva-app-data-v1';
+const LEGACY_STORAGE_KEY = 'movva-app-data-v1';
 
 export const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -31,6 +33,8 @@ const offsetDate = (days: number) => {
 };
 
 const defaultSettings: Settings = {
+  dataProfile: 'production',
+  profileLocked: false,
   defaultDuration: 60,
   startTime: '07:00',
   endTime: '20:00',
@@ -43,7 +47,7 @@ const defaultSettings: Settings = {
   },
 };
 
-function seedData(): AppData {
+function demoData(): AppData {
   const now = new Date();
   const weekday = now.getDay() || 7;
   const month = currentPeriodKey(now);
@@ -175,25 +179,38 @@ function seedData(): AppData {
         createdAt: `${month}-07`,
       },
     ],
+    settings: { ...structuredClone(defaultSettings), dataProfile: 'demo' },
+  };
+}
+
+function productionData(): AppData {
+  return {
+    students: [],
+    lessons: [],
+    periods: [],
+    transactions: [],
     settings: structuredClone(defaultSettings),
   };
 }
 
 function loadData(): AppData {
-  if (typeof localStorage === 'undefined') return seedData();
+  if (typeof localStorage === 'undefined') return productionData();
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return seedData();
+    const saved = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!saved) return productionData();
     const parsed = JSON.parse(saved) as Partial<AppData>;
+    const inferredProfile: DataProfile =
+      parsed.settings?.dataProfile ??
+      (parsed.students?.some((student) => student.id === 'student-ana') ? 'demo' : 'production');
     return {
       students: parsed.students ?? [],
       lessons: parsed.lessons ?? [],
       periods: parsed.periods ?? [],
       transactions: parsed.transactions ?? [],
-      settings: { ...defaultSettings, ...parsed.settings },
+      settings: { ...defaultSettings, ...parsed.settings, dataProfile: inferredProfile },
     };
   } catch {
-    return seedData();
+    return productionData();
   }
 }
 
@@ -406,13 +423,16 @@ export const useAppStore = defineStore('app', () => {
     );
   }
 
-  function resetDemo() {
-    const fresh = seedData();
+  function switchDataProfile(profile: DataProfile) {
+    if (settings.value.profileLocked || profile === settings.value.dataProfile) return false;
+    const fresh = profile === 'demo' ? demoData() : productionData();
     students.value = fresh.students;
     lessons.value = fresh.lessons;
     periods.value = fresh.periods;
     transactions.value = fresh.transactions;
-    settings.value = fresh.settings;
+    settings.value.dataProfile = profile;
+    settings.value.profileLocked = false;
+    return true;
   }
 
   return {
@@ -436,6 +456,6 @@ export const useAppStore = defineStore('app', () => {
     closePeriod,
     addCategory,
     removeCategory,
-    resetDemo,
+    switchDataProfile,
   };
 });

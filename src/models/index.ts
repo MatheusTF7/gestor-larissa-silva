@@ -1,5 +1,6 @@
 export type LessonStatus = 'scheduled' | 'completed' | 'cancelled' | 'absent' | 'rescheduled';
 export type TransactionType = 'income' | 'expense';
+export type DataProfile = 'production' | 'demo';
 
 export interface Schedule {
   id: string;
@@ -55,6 +56,8 @@ export interface Transaction {
 }
 
 export interface Settings {
+  dataProfile: DataProfile;
+  profileLocked: boolean;
   defaultDuration: number;
   startTime: string;
   endTime: string;

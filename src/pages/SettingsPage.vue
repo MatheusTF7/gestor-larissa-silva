@@ -177,27 +177,63 @@
           </div>
         </section>
 
-        <section class="surface settings-section compact">
+        <section class="surface settings-section profile-section">
           <header>
             <span class="setting-icon grey"><q-icon name="storage" /></span>
             <div>
-              <h2 class="section-title">Dados do aplicativo</h2>
-              <p>As informações ficam salvas neste dispositivo.</p>
+              <h2 class="section-title">Perfil de dados</h2>
+              <p>Escolha entre uma base pronta para uso ou dados de demonstração.</p>
             </div>
           </header>
-          <div class="data-actions">
-            <div>
-              <strong>{{ store.students.length }} alunos</strong
-              ><span>{{ store.transactions.length }} lançamentos financeiros</span>
+          <div class="profile-settings">
+            <div class="profile-field">
+              <div class="field-copy">
+                <strong>Perfil atual</strong>
+                <span>A troca remove todos os alunos, aulas e lançamentos existentes.</span>
+              </div>
+              <q-select
+                :model-value="store.settings.dataProfile"
+                outlined
+                dense
+                emit-value
+                map-options
+                :disable="store.settings.profileLocked"
+                :options="profileOptions"
+                @update:model-value="confirmProfileChange"
+              />
             </div>
-            <q-btn
-              outline
-              no-caps
-              color="negative"
-              icon="restart_alt"
-              label="Restaurar demonstração"
-              @click="confirmReset"
-            />
+            <q-separator />
+            <div class="profile-lock">
+              <div class="field-copy">
+                <strong>Travar modo de produção</strong>
+                <span
+                  >Impede a troca de perfil e protege os dados contra substituição acidental.</span
+                >
+              </div>
+              <q-toggle
+                v-model="store.settings.profileLocked"
+                color="primary"
+                :disable="store.settings.dataProfile !== 'production'"
+                :label="store.settings.profileLocked ? 'Travado' : 'Destravado'"
+              />
+            </div>
+            <div v-if="store.settings.profileLocked" class="profile-locked-note">
+              <q-icon name="lock" />
+              <span
+                >Modo de produção protegido. Desative a trava para permitir trocas de perfil.</span
+              >
+            </div>
+            <div class="data-summary">
+              <span
+                ><strong>{{ store.students.length }}</strong> alunos</span
+              >
+              <span
+                ><strong>{{ store.lessons.length }}</strong> aulas registradas</span
+              >
+              <span
+                ><strong>{{ store.transactions.length }}</strong> lançamentos</span
+              >
+            </div>
           </div>
         </section>
       </div>
@@ -208,6 +244,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useQuasar } from 'quasar';
+import type { DataProfile } from '@/models';
 import { useAppStore } from '@/stores/app-store';
 import { weekdays } from '@/utils/format';
 
@@ -220,6 +257,10 @@ const durationOptions = [30, 40, 45, 50, 60, 75, 90].map((value) => ({
   label: `${value} minutos`,
   value,
 }));
+const profileOptions: Array<{ label: string; value: DataProfile }> = [
+  { label: 'Pronto para uso', value: 'production' },
+  { label: 'Demonstração com dados', value: 'demo' },
+];
 function toggleDay(day: number) {
   const days = store.settings.workingDays;
   if (days.includes(day)) {
@@ -250,16 +291,26 @@ function removeCategory(type: 'income' | 'expense', category: string) {
     }).onOk(() => store.removeCategory(type, category));
   } else store.removeCategory(type, category);
 }
-function confirmReset() {
+function confirmProfileChange(profile: DataProfile | null) {
+  if (!profile || profile === store.settings.dataProfile) return;
+  if (store.settings.profileLocked) {
+    $q.notify({
+      type: 'warning',
+      message: 'Desative a trava de produção antes de trocar o perfil.',
+    });
+    return;
+  }
+  const targetLabel = profileOptions.find((option) => option.value === profile)?.label ?? profile;
   $q.dialog({
-    title: 'Restaurar dados de demonstração?',
-    message: 'Os dados atuais deste dispositivo serão substituídos pelos exemplos iniciais.',
-    cancel: { label: 'Cancelar', flat: true },
-    ok: { label: 'Restaurar', color: 'negative', unelevated: true },
+    title: `Trocar para “${targetLabel}”?`,
+    message:
+      'Todos os alunos, aulas, períodos financeiros e lançamentos atuais serão excluídos. Essa ação não pode ser desfeita.',
+    cancel: { label: 'Manter perfil atual', flat: true },
+    ok: { label: 'Trocar e apagar dados', color: 'negative', unelevated: true },
     persistent: true,
   }).onOk(() => {
-    store.resetDemo();
-    $q.notify({ type: 'positive', message: 'Dados de demonstração restaurados.' });
+    if (!store.switchDataProfile(profile)) return;
+    $q.notify({ type: 'positive', message: `Perfil alterado para “${targetLabel}”.` });
   });
 }
 </script>
@@ -395,8 +446,7 @@ function confirmReset() {
 .compact > header {
   border-bottom: 0;
 }
-.single-setting,
-.data-actions {
+.single-setting {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -405,16 +455,57 @@ function confirmReset() {
   border-radius: 12px;
   background: var(--studio-background);
 }
-.single-setting > div,
-.data-actions > div {
+.single-setting > div {
   display: flex;
   flex-direction: column;
 }
-.single-setting span,
-.data-actions span {
+.single-setting span {
   margin-top: 3px;
   color: var(--muted);
   font-size: 11px;
+}
+.profile-settings {
+  display: grid;
+  gap: 18px;
+  padding: 22px 24px;
+}
+.profile-field,
+.profile-lock {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  align-items: center;
+  gap: 18px;
+}
+.profile-lock .q-toggle {
+  justify-self: end;
+}
+.profile-locked-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--studio-primary-soft);
+  color: var(--q-primary);
+  font-size: 12px;
+}
+.data-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.data-summary span {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--studio-background);
+  color: var(--muted);
+  font-size: 11px;
+}
+.data-summary strong {
+  color: var(--ink);
+  font-size: 18px;
 }
 @media (max-width: 1000px) {
   .settings-grid {
@@ -435,13 +526,15 @@ function confirmReset() {
   .field-copy {
     margin-top: 5px;
   }
-  .data-actions {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 13px;
+  .profile-field,
+  .profile-lock {
+    grid-template-columns: 1fr;
   }
-  .data-actions > .q-btn {
-    width: 100%;
+  .profile-lock .q-toggle {
+    justify-self: start;
+  }
+  .data-summary {
+    grid-template-columns: 1fr;
   }
 }
 </style>
