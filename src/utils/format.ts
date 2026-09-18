@@ -12,7 +12,7 @@ export const weekdays = [
 
 export const lessonStatuses: Array<{ value: LessonStatus; label: string; icon: string }> = [
   { value: 'scheduled', label: 'Agendada', icon: 'schedule' },
-  { value: 'completed', label: 'Realizada', icon: 'check_circle' },
+  { value: 'completed', label: 'Concluída', icon: 'check_circle' },
   { value: 'absent', label: 'Falta', icon: 'person_off' },
   { value: 'cancelled', label: 'Cancelada', icon: 'cancel' },
   { value: 'rescheduled', label: 'Remarcada', icon: 'event_repeat' },

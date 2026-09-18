@@ -26,8 +26,21 @@
             icon="chevron_left"
             aria-label="Anterior"
             @click="moveDate(view === 'week' ? -7 : -1)"
-          /><q-btn flat no-caps class="date-label" @click="goToday"
-            ><q-icon name="calendar_today" /><span>{{ currentLabel }}</span></q-btn
+          /><q-btn flat no-caps class="date-label"
+            ><q-icon name="calendar_today" /><span>{{
+              view === 'week' && $q.screen.lt.sm ? mobileDateLabel : currentLabel
+            }}</span
+            ><q-icon name="arrow_drop_down" />
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date
+                v-model="selectedDate"
+                mask="YYYY-MM-DD"
+                minimal
+                today-btn
+                :first-day-of-week="0"
+                color="primary"
+              />
+            </q-popup-proxy> </q-btn
           ><q-btn
             flat
             round
@@ -59,7 +72,83 @@
         </div>
       </section>
 
-      <section v-if="view === 'week'" class="week-board surface">
+      <section v-if="view === 'week' && $q.screen.lt.sm" class="mobile-week-view surface">
+        <div
+          class="mobile-day-strip"
+          :style="{ gridTemplateColumns: `repeat(${weekDays.length}, 1fr)` }"
+        >
+          <button
+            v-for="day in weekDays"
+            :key="day.date"
+            type="button"
+            :class="{
+              selected: day.date === mobileDay?.date,
+              today: day.date === today,
+            }"
+            @click="selectedDate = day.date"
+          >
+            <span>{{ day.short }}</span>
+            <strong>{{ day.day }}</strong>
+            <small v-if="day.items.length">{{ day.items.length }}</small>
+          </button>
+        </div>
+
+        <header class="mobile-day-head">
+          <div>
+            <span>{{ mobileDayWeekday }}</span>
+            <strong>{{ mobileDateLabel }}</strong>
+          </div>
+          <q-btn
+            v-if="selectedDate !== today"
+            flat
+            dense
+            no-caps
+            color="primary"
+            label="Hoje"
+            @click="goToday"
+          />
+        </header>
+
+        <div v-if="mobileDay?.items.length" class="mobile-lesson-list">
+          <button
+            v-for="item in mobileDay.items"
+            :key="item.id"
+            type="button"
+            class="mobile-lesson-card"
+            @click="openEdit(item)"
+          >
+            <div class="mobile-lesson-time">
+              <strong>{{ item.time }}</strong>
+              <span>{{ item.duration }} min</span>
+            </div>
+            <div class="mobile-lesson-person">
+              <strong>{{ item.studentName }}</strong>
+              <span>{{ item.isRecurring ? 'Horário recorrente' : 'Aula avulsa' }}</span>
+              <small v-if="item.notes">{{ item.notes }}</small>
+            </div>
+            <q-chip dense :class="['status-chip', `status-${item.status}`]">
+              {{ statusLabel(item.status) }}
+            </q-chip>
+            <q-icon name="chevron_right" class="mobile-lesson-arrow" />
+          </button>
+        </div>
+        <div v-else class="empty-state mobile-empty-state">
+          <q-icon name="event_available" size="42px" />
+          <strong>Dia livre</strong>
+          <div>Não há aulas agendadas para esta data.</div>
+          <q-btn
+            class="q-mt-md"
+            unelevated
+            no-caps
+            color="primary"
+            icon="add"
+            label="Agendar aula"
+            @click="openNewLesson(mobileDay?.date ?? selectedDate)"
+          />
+        </div>
+      </section>
+
+      <section v-else-if="view === 'week'" class="week-board surface">
         <div class="week-scroll">
           <div
             class="week-grid"
@@ -95,8 +184,20 @@
                     >
                   </div>
                   <div v-for="item in group.items.slice(0, 3)" :key="item.id" class="mini-person">
-                    <span :class="['status-dot', item.status]"></span
-                    ><span>{{ item.studentName }}</span>
+                    <div class="mini-person-head">
+                      <span :class="['status-dot', item.status]"></span>
+                      <strong>{{ item.studentName }}</strong>
+                      <q-chip dense :class="['status-chip', `status-${item.status}`]">
+                        {{ statusLabel(item.status) }}
+                      </q-chip>
+                    </div>
+                    <small>
+                      <q-icon name="schedule" /> {{ item.duration }} min ·
+                      {{ item.isRecurring ? 'Recorrente' : 'Avulsa' }}
+                    </small>
+                    <small v-if="item.notes" class="mini-person-notes">
+                      <q-icon name="notes" /> {{ item.notes }}
+                    </small>
                   </div>
                   <small v-if="group.items.length > 3"
                     >+ {{ group.items.length - 3 }} aluno(s)</small
@@ -152,9 +253,13 @@
                       v-for="status in lessonStatuses"
                       :key="status.value"
                       clickable
+                      :active="status.value === item.status"
+                      active-class="status-menu-active"
                       @click="setStatus(item, status.value)"
                       ><q-item-section avatar><q-icon :name="status.icon" /></q-item-section
-                      ><q-item-section>{{ status.label }}</q-item-section></q-item
+                      ><q-item-section>{{ status.label }}</q-item-section
+                      ><q-item-section v-if="status.value === item.status" side
+                        ><q-icon name="check" color="primary" /></q-item-section></q-item
                     ><q-separator /><q-item clickable @click="openEdit(item)"
                       ><q-item-section avatar><q-icon name="edit_calendar" /></q-item-section
                       ><q-item-section>Alterar / remarcar</q-item-section></q-item
@@ -193,9 +298,14 @@
           ><div v-for="item in groupItems" :key="item.id">
             <div class="student-avatar">{{ initials(item.studentName) }}</div>
             <div>
-              <strong>{{ item.studentName }}</strong
-              ><span>{{ item.duration }} min · {{ statusLabel(item.status) }}</span>
+              <strong>{{ item.studentName }}</strong>
+              <span
+                >{{ item.duration }} min · {{ item.isRecurring ? 'Recorrente' : 'Avulsa' }}</span
+              >
             </div>
+            <q-chip dense :class="['status-chip', `status-${item.status}`]">
+              {{ statusLabel(item.status) }}
+            </q-chip>
             <q-btn flat round icon="more_horiz"
               ><q-menu auto-close
                 ><q-list
@@ -203,8 +313,13 @@
                     v-for="status in lessonStatuses"
                     :key="status.value"
                     clickable
+                    :active="status.value === item.status"
+                    active-class="status-menu-active"
                     @click="setStatus(item, status.value)"
-                    ><q-item-section>{{ status.label }}</q-item-section></q-item
+                    ><q-item-section avatar><q-icon :name="status.icon" /></q-item-section
+                    ><q-item-section>{{ status.label }}</q-item-section
+                    ><q-item-section v-if="status.value === item.status" side
+                      ><q-icon name="check" color="primary" /></q-item-section></q-item
                   ><q-item clickable @click="openEdit(item)"
                     ><q-item-section>Alterar aula</q-item-section></q-item
                   ></q-list
@@ -231,9 +346,18 @@
         ><header class="dialog-head">
           <div>
             <div class="eyebrow">{{ editingItem ? 'Alterar ocorrência' : 'Nova ocorrência' }}</div>
-            <h2 class="dialog-title">
-              {{ editingItem ? editingItem.studentName : 'Agendar aula' }}
-            </h2>
+            <div class="dialog-title-row">
+              <h2 class="dialog-title">
+                {{ editingItem ? editingItem.studentName : 'Agendar aula' }}
+              </h2>
+              <q-chip
+                v-if="editingItem"
+                :icon="statusIcon(lessonForm.status)"
+                :class="['status-chip', `status-${lessonForm.status}`]"
+              >
+                {{ statusLabel(lessonForm.status) }}
+              </q-chip>
+            </div>
           </div>
           <q-space /><q-btn flat round icon="close" v-close-popup />
         </header>
@@ -330,7 +454,9 @@ const router = useRouter();
 const today = toISODate(new Date());
 const selectedDate = ref(today);
 const view = ref<'day' | 'week'>('week');
-const showWeekends = ref(store.settings.workingDays.some((weekday) => weekday === 6 || weekday === 7));
+const showWeekends = ref(
+  store.settings.workingDays.some((weekday) => weekday === 6 || weekday === 7),
+);
 const formOpen = ref(false);
 const groupOpen = ref(false);
 const groupItems = ref<AgendaItem[]>([]);
@@ -388,6 +514,19 @@ const weekDays = computed(() =>
     };
   }),
 );
+const mobileDay = computed(
+  () => weekDays.value.find((day) => day.date === selectedDate.value) ?? weekDays.value[0],
+);
+const mobileDateLabel = computed(() =>
+  formatDate(mobileDay.value?.date ?? selectedDate.value, {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }),
+);
+const mobileDayWeekday = computed(() =>
+  formatDate(mobileDay.value?.date ?? selectedDate.value, { weekday: 'long' }),
+);
 const currentLabel = computed(() =>
   view.value === 'day'
     ? formatDate(selectedDate.value, { day: '2-digit', month: 'long', year: 'numeric' })
@@ -407,6 +546,8 @@ const initials = (name: string) =>
     .map((x) => x[0])
     .join('')
     .toUpperCase();
+const statusIcon = (status: LessonStatus) =>
+  lessonStatuses.find((item) => item.value === status)?.icon ?? 'info';
 function groupByTime(items: AgendaItem[]) {
   const groups = new Map<string, AgendaItem[]>();
   items.forEach((item) => groups.set(item.time, [...(groups.get(item.time) ?? []), item]));
@@ -523,6 +664,145 @@ onMounted(() => {
 .date-label .q-icon {
   margin-right: 9px;
 }
+.date-label .q-icon:last-child {
+  margin-right: 0;
+  margin-left: 3px;
+}
+.mobile-week-view {
+  overflow: hidden;
+}
+.mobile-day-strip {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--studio-background);
+}
+.mobile-day-strip button {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  place-items: center;
+  padding: 6px 2px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.mobile-day-strip button span {
+  font-size: 9px;
+  font-weight: 700;
+}
+.mobile-day-strip button strong {
+  color: var(--ink);
+  font-size: 17px;
+}
+.mobile-day-strip button small {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  width: 15px;
+  height: 15px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--studio-primary-soft);
+  color: var(--q-primary);
+  font-size: 8px;
+  font-weight: 700;
+}
+.mobile-day-strip button.today:not(.selected) {
+  border-color: var(--q-accent);
+}
+.mobile-day-strip button.selected {
+  border-color: var(--q-primary);
+  background: var(--q-primary);
+  color: white;
+  box-shadow: 0 5px 12px rgba(184, 111, 78, 0.2);
+}
+.mobile-day-strip button.selected strong,
+.mobile-day-strip button.selected small {
+  color: white;
+}
+.mobile-day-strip button.selected small {
+  background: rgba(255, 255, 255, 0.2);
+}
+.mobile-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+}
+.mobile-day-head > div {
+  display: flex;
+  flex-direction: column;
+  text-transform: capitalize;
+}
+.mobile-day-head span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.mobile-day-head strong {
+  font:
+    700 18px 'Playfair Display',
+    serif;
+}
+.mobile-lesson-list {
+  display: grid;
+  gap: 9px;
+  padding: 6px 12px 16px;
+}
+.mobile-lesson-card {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 13px 10px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--studio-surface);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(57, 42, 37, 0.04);
+  cursor: pointer;
+}
+.mobile-lesson-time,
+.mobile-lesson-person {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.mobile-lesson-time strong {
+  color: var(--q-primary);
+}
+.mobile-lesson-time span,
+.mobile-lesson-person span,
+.mobile-lesson-person small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobile-lesson-person > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobile-lesson-person small {
+  margin-top: 3px;
+  font-style: italic;
+}
+.mobile-lesson-arrow {
+  color: var(--muted);
+}
+.mobile-empty-state {
+  padding-top: 28px;
+}
 .week-board {
   overflow: hidden;
 }
@@ -602,11 +882,42 @@ onMounted(() => {
   font-size: 10px;
 }
 .mini-person {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.mini-person-head {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 7px;
-  margin: 6px 0;
-  font-size: 12px;
+}
+.mini-person-head > strong {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini-person small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini-person-notes {
+  display: block;
+  font-style: italic;
+}
+.status-chip {
+  min-height: 22px;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
 }
 .status-dot {
   width: 7px;
@@ -768,6 +1079,19 @@ onMounted(() => {
 .group-list span {
   color: var(--muted);
   font-size: 11px;
+}
+.group-list .status-chip {
+  flex: 0 0 auto;
+}
+.status-menu-active {
+  background: var(--studio-primary-soft);
+  color: var(--q-primary);
+}
+.dialog-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
 }
 .lesson-form {
   display: grid;
